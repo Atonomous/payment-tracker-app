@@ -20,25 +20,35 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { initializeApp, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Make Firebase modules globally available for App.js (simplistic approach for CDN setup)
         window.firebase = {
             initializeApp,
+            getApp, // Added getApp to window.firebase
             getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
             getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, updateDoc
         };
+
+        // Initialize Firebase here once, using the environment variables
+        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+        if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
+            try {
+                window.firebase.initializeApp(firebaseConfig);
+            } catch (e) {
+                // If app is already initialized (e.g., during hot reload in dev), catch the error
+                console.warn("Firebase app already initialized by module script.", e);
+            }
+        } else {
+            console.error("Firebase config is missing or empty. Cannot initialize Firebase.");
+        }
     </script>
 
     <!-- Your React App -->
     <script type="text/babel">
         import React, { useState, useEffect, createContext, useContext } from 'react';
-        // Firebase imports are now handled by the window.firebase object exposed above
-        // import { initializeApp } from 'firebase/app';
-        // import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-        // import { getFirestore, collection, addDoc, onSnapshot, query, orderBy, doc, deleteDoc, updateDoc } from 'firebase/firestore';
 
         // --- Context for Firebase and User ---
         const FirebaseContext = createContext(null);
@@ -50,22 +60,21 @@
             const [isAuthReady, setIsAuthReady] = useState(false);
 
             useEffect(() => {
-                const initializeFirebase = async () => {
+                const setupFirebase = async () => {
                     try {
-                        // Use the Firebase config provided by the environment
-                        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
                         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-
-                        if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
-                            console.error("Firebase config is missing or empty. Please ensure __firebase_config is set.");
-                            return;
+                        // Get the already initialized app instance from the global window.firebase
+                        let appInstance;
+                        try {
+                            appInstance = window.firebase.getApp(); // Get the default app instance
+                        } catch (e) {
+                            console.error("Firebase app not found. Ensure it's initialized in the module script.", e);
+                            return; // Exit if app instance isn't available
                         }
 
-                        // Initialize Firebase only once
-                        const app = window.firebase.initializeApp(firebaseConfig);
-                        const firestoreDb = window.firebase.getFirestore(app);
-                        const firebaseAuth = window.firebase.getAuth(app);
+                        const firestoreDb = window.firebase.getFirestore(appInstance);
+                        const firebaseAuth = window.firebase.getAuth(appInstance);
 
                         setDb(firestoreDb);
                         setAuth(firebaseAuth);
@@ -82,7 +91,6 @@
                             if (user) {
                                 setUserId(user.uid);
                             } else {
-                                // Fallback for anonymous sign-in if initial token fails or is not present
                                 if (!firebaseAuth.currentUser) {
                                     window.firebase.signInAnonymously(firebaseAuth).then(anonUser => {
                                         setUserId(anonUser.user.uid);
@@ -96,12 +104,12 @@
 
                         return () => unsubscribe(); // Cleanup auth listener
                     } catch (error) {
-                        console.error("Failed to initialize Firebase:", error);
+                        console.error("Failed to set up Firebase in provider:", error);
                     }
                 };
 
-                initializeFirebase();
-            }, []);
+                setupFirebase();
+            }, []); // Empty dependency array means this runs once on mount
 
             return (
                 <FirebaseContext.Provider value={{ db, auth, userId, isAuthReady }}>
@@ -161,7 +169,10 @@
             useEffect(() => {
                 if (!db || !userId || !isAuthReady) return;
 
-                const paymentsCollectionRef = window.firebase.collection(db, `artifacts/${__app_id}/users/${userId}/payments`);
+                // Use __app_id from the global scope/environment
+                const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+                const paymentsCollectionRef = window.firebase.collection(db, `artifacts/${currentAppId}/users/${userId}/payments`);
                 // Note: orderBy is commented out to avoid potential index errors as per instructions.
                 // Data will be sorted in memory.
                 const q = window.firebase.query(paymentsCollectionRef /*, orderBy('timestamp', 'desc')*/);
@@ -210,10 +221,11 @@
                 }
 
                 try {
-                    const paymentsCollectionRef = window.firebase.collection(db, `artifacts/${__app_id}/users/${userId}/payments`);
+                    const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                    const paymentsCollectionRef = window.firebase.collection(db, `artifacts/${currentAppId}/users/${userId}/payments`);
                     if (editingPayment) {
                         // Update existing payment
-                        const paymentRef = window.firebase.doc(db, `artifacts/${__app_id}/users/${userId}/payments`, editingPayment.id);
+                        const paymentRef = window.firebase.doc(db, `artifacts/${currentAppId}/users/${userId}/payments`, editingPayment.id);
                         await window.firebase.updateDoc(paymentRef, {
                             partyName: formData.partyName,
                             amount: amountNum,
@@ -262,7 +274,8 @@
                             setModalAction(null);
                             return;
                         }
-                        await window.firebase.deleteDoc(window.firebase.doc(db, `artifacts/${__app_id}/users/${userId}/payments`, paymentId));
+                        const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+                        await window.firebase.deleteDoc(window.firebase.doc(db, `artifacts/${currentAppId}/users/${userId}/payments`, paymentId));
                         setModalMessage("Payment deleted successfully!");
                         setModalAction(null);
                     } catch (error) {
@@ -514,14 +527,11 @@
         }
 
         // Wrap the App with FirebaseProvider
-        // The FirebaseProvider in the previous version was incorrect for this setup
-        // as it was trying to re-initialize Firebase and not using the window.firebase objects.
-        // We'll simplify it for this embedded scenario.
         function WrappedApp() {
             return (
-                <FirebaseProvider>
+                <FirebaseContext.Provider value={{ db: null, auth: null, userId: null, isAuthReady: false }}>
                     <App />
-                </FirebaseProvider>
+                </FirebaseContext.Provider>
             );
         }
 
