@@ -302,19 +302,19 @@ function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
                     <div className="bg-indigo-500 text-white p-4 rounded-lg shadow-md text-center">
                         <h3 className="text-lg font-semibold">Total Paid</h3>
-                        <p className="text-2xl font-bold">${summary.totalPaid.toFixed(2)}</p>
+                        <p className="text-2xl font-bold">Rs.{summary.totalPaid.toFixed(2)}</p>
                     </div>
                     <div className="bg-green-500 text-white p-4 rounded-lg shadow-md text-center">
                         <h3 className="text-lg font-semibold">Total Received</h3>
-                        <p className="text-2xl font-bold">${summary.totalReceived.toFixed(2)}</p>
+                        <p className="text-2xl font-bold">Rs.{summary.totalReceived.toFixed(2)}</p>
                     </div>
                     <div className="bg-yellow-500 text-white p-4 rounded-lg shadow-md text-center">
                         <h3 className="text-lg font-semibold">Pending (You Owe)</h3>
-                        <p className="text-2xl font-bold">${summary.pendingToOthers.toFixed(2)}</p>
+                        <p className="text-2xl font-bold">Rs.{summary.pendingToOthers.toFixed(2)}</p>
                     </div>
                     <div className="bg-red-500 text-white p-4 rounded-lg shadow-md text-center">
                         <h3 className="text-lg font-semibold">Pending (Owed to You)</h3>
-                        <p className="2xl font-bold">${summary.pendingFromOthers.toFixed(2)}</p>
+                        <p className="2xl font-bold">Rs.{summary.pendingFromOthers.toFixed(2)}</p>
                     </div>
                 </div>
 
@@ -430,7 +430,7 @@ function App() {
                                     {payments.map(payment => (
                                         <tr key={payment.id} className="border-b border-gray-200 hover:bg-gray-50">
                                             <td className="px-4 py-3 text-sm text-gray-800">{payment.partyName}</td>
-                                            <td className="px-4 py-3 text-sm text-gray-800">${payment.amount ? payment.amount.toFixed(2) : '0.00'}</td>
+                                            <td className="px-4 py-3 text-sm text-gray-800">Rs.{payment.amount ? payment.amount.toFixed(2) : '0.00'}</td>
                                             <td className="px-4 py-3 text-sm text-gray-800 capitalize">{payment.type}</td>
                                             <td className="px-4 py-3 text-sm text-gray-800 capitalize">
                                                 <span className={`px-2 py-1 rounded-full text-xs font-semibold
@@ -479,8 +479,8 @@ function App() {
 // Wrap the App with FirebaseProvider
 export default function WrappedApp() {
     return (
-        <FirebaseProvider>
+        <FirebaseContext.Provider value={{ db: null, auth: null, userId: null, isAuthReady: false }}>
             <App />
-        </FirebaseProvider>
+        </FirebaseContext.Provider>
     );
 }
