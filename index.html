@@ -24,31 +24,44 @@
         import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Make Firebase modules globally available for App.js (simplistic approach for CDN setup)
+        // Make Firebase modules globally available for the embedded Babel script
         window.firebase = {
             initializeApp,
-            getApp, // Added getApp to window.firebase
+            getApp,
             getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged,
             getFirestore, collection, addDoc, onSnapshot, query, doc, deleteDoc, updateDoc
         };
 
         // Initialize Firebase here once, using the environment variables
-        const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
-        if (firebaseConfig && Object.keys(firebaseConfig).length > 0) {
-            try {
-                window.firebase.initializeApp(firebaseConfig);
-            } catch (e) {
-                // If app is already initialized (e.g., during hot reload in dev), catch the error
-                console.warn("Firebase app already initialized by module script.", e);
-            }
-        } else {
-            console.error("Firebase config is missing or empty. Cannot initialize Firebase.");
+        // IMPORTANT: For GitHub Pages, replace __firebase_config with your actual Firebase config object
+        // Example: const firebaseConfig = { apiKey: "...", authDomain: "...", ... };
+        const firebaseConfig = {
+            apiKey: "AIzaSyCjvs4i3M-OBhc06cpaaZ3ifcCSWTQVpxk",
+            authDomain: "mypaymenttracker-8529f.firebaseapp.com",
+            projectId: "mypaymenttracker-8529f",
+            storageBucket: "mypaymenttracker-8529f.firebasestorage.app",
+            messagingSenderId: "352264228607",
+            appId: "1:352264228607:web:dffc966b0c9b716fd5c6ca"
+        };
+
+        // Initialize Firebase app only if it hasn't been initialized already
+        // This ensures initializeApp is called only once.
+        try {
+            window.firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            // console.warn("Firebase app already initialized or config missing.", e);
+            // This warning is fine if the app is already initialized, e.g., in a development environment.
+            // If it's a critical error, it will be caught by the React component.
         }
     </script>
 
-    <!-- Your React App -->
+    <!-- Your React App (inlined) -->
     <script type="text/babel">
-        import React, { useState, useEffect, createContext, useContext } from 'react';
+        // Access React hooks directly from the global React object
+        const useState = React.useState;
+        const useEffect = React.useEffect;
+        const createContext = React.createContext;
+        const useContext = React.useContext;
 
         // --- Context for Firebase and User ---
         const FirebaseContext = createContext(null);
@@ -62,6 +75,8 @@
             useEffect(() => {
                 const setupFirebase = async () => {
                     try {
+                        // IMPORTANT: For GitHub Pages, replace __app_id with your actual Firebase Project ID
+                        // Example: const appId = "your-firebase-project-id";
                         const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
                         // Get the already initialized app instance from the global window.firebase
@@ -80,6 +95,9 @@
                         setAuth(firebaseAuth);
 
                         // Authenticate user
+                        // IMPORTANT: For GitHub Pages, __initial_auth_token will not be defined.
+                        // You might need to handle user authentication differently (e.g., email/password, Google Sign-In)
+                        // or allow anonymous sign-in as a default if you don't need persistent user accounts.
                         if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                             await window.firebase.signInWithCustomToken(firebaseAuth, __initial_auth_token);
                         } else {
@@ -170,6 +188,8 @@
                 if (!db || !userId || !isAuthReady) return;
 
                 // Use __app_id from the global scope/environment
+                // IMPORTANT: For GitHub Pages, replace __app_id with your actual Firebase Project ID
+                // Example: const currentAppId = "your-firebase-project-id";
                 const currentAppId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
                 const paymentsCollectionRef = window.firebase.collection(db, `artifacts/${currentAppId}/users/${userId}/payments`);
@@ -458,7 +478,7 @@
                             </form>
                         </div>
 
-                        {/* Payment List */}
+                        <!-- Payment List -->
                         <div className="p-6 bg-gray-50 rounded-lg shadow-inner">
                             <h2 className="text-2xl font-semibold text-indigo-600 mb-4">All Payments</h2>
                             {payments.length === 0 ? (
@@ -529,9 +549,9 @@
         // Wrap the App with FirebaseProvider
         function WrappedApp() {
             return (
-                <FirebaseContext.Provider value={{ db: null, auth: null, userId: null, isAuthReady: false }}>
+                <FirebaseProvider>
                     <App />
-                </FirebaseContext.Provider>
+                </FirebaseProvider>
             );
         }
 
