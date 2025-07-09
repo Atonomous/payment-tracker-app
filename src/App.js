@@ -15,24 +15,17 @@ const FirebaseProvider = ({ children }) => {
     useEffect(() => {
         const initializeFirebase = async () => {
             try {
-				// Your web app's Firebase configuration
-				const firebaseConfig = {
-				  apiKey: "AIzaSyCjvs4i3M-OBhc06cpaaZ3ifcCSWTQVpxk",
-				  authDomain: "mypaymenttracker-8529f.firebaseapp.com",
-				  projectId: "mypaymenttracker-8529f",
-				  storageBucket: "mypaymenttracker-8529f.firebasestorage.app",
-				  messagingSenderId: "352264228607",
-				  appId: "1:352264228607:web:dffc966b0c9b716fd5c6ca"
-				};
+                // Use the Firebase config provided by the environment
+                const firebaseConfig = JSON.parse(typeof __firebase_config !== 'undefined' ? __firebase_config : '{}');
+                const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
 
-				// Initialize Firebase
-				const app = initializeApp(firebaseConfig);
 
                 if (!firebaseConfig || Object.keys(firebaseConfig).length === 0) {
                     console.error("Firebase config is missing or empty. Please ensure __firebase_config is set.");
                     return;
                 }
 
+                // Initialize Firebase only once
                 const app = initializeApp(firebaseConfig);
                 const firestoreDb = getFirestore(app);
                 const firebaseAuth = getAuth(app);
@@ -321,7 +314,7 @@ function App() {
                     </div>
                     <div className="bg-red-500 text-white p-4 rounded-lg shadow-md text-center">
                         <h3 className="text-lg font-semibold">Pending (Owed to You)</h3>
-                        <p className="text-2xl font-bold">${summary.pendingFromOthers.toFixed(2)}</p>
+                        <p className="2xl font-bold">${summary.pendingFromOthers.toFixed(2)}</p>
                     </div>
                 </div>
 
